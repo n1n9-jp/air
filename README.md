@@ -1,5 +1,7 @@
 # README
 
+東京風速 https://air-tokyo.pages.dev/
+
 ## データソース更新 & Cloudflareデプロイ版
 
 | コマンド | 用途 |
@@ -13,3 +15,8 @@
 
 フロントエンド（public/）は元々ビルド不要な静的ファイルで、Functionsはwrangler pages deploy時にWranglerが自動コンパイルします。
 
+## デプロイ
+
+```
+npm run deploy
+```
