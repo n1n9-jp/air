@@ -33,6 +33,58 @@
     // var STOP_ANIMATION_ID = "#stop-animation";
     var POSITION_ID = "#position";
 
+    // ===================== MapLibre Integration =====================
+
+    // Tokyo bounding box (will be overridden from topo data)
+    var TOKYO_CENTER = [139.4309, 35.6998];
+
+    /**
+     * Initialize MapLibre GL map with dark style and navigation controls.
+     * Returns the map instance.
+     */
+    var maplibreMap = (function initMapLibre() {
+        var map = new maplibregl.Map({
+            container: "maplibre-map",
+            style: {
+                version: 8,
+                sources: {},
+                layers: [{
+                    id: "background",
+                    type: "background",
+                    paint: {"background-color": "#000006"}
+                }]
+            },
+            center: TOKYO_CENTER,
+            zoom: 9,
+            minZoom: 7,
+            maxZoom: 14,
+            pitchWithRotate: false,
+            dragRotate: false,
+            touchPitch: false
+        });
+
+        map.addControl(new maplibregl.NavigationControl({showCompass: false}), "top-right");
+
+        return map;
+    })();
+
+    /**
+     * Creates a D3 projection that matches the current MapLibre viewport.
+     * This allows D3-rendered SVG/Canvas layers to stay aligned with the MapLibre map.
+     */
+    function createMapLibreProjection() {
+        return function projection(coord) {
+            var p = maplibreMap.project(new maplibregl.LngLat(coord[0], coord[1]));
+            return [p.x, p.y];
+        };
+    }
+
+    /**
+     * Rebuild all visual layers to match the current MapLibre viewport.
+     * Called on map move/zoom events after initial data load.
+     */
+    var rebuildLayers = null;  // set after initial load completes
+
     // metadata about each type of overlay
     var OVERLAY_TYPES = {
         "temp": {min: -10,   max: 35,    scale: "line", precision: 1, label: "気温 Temperature", unit: "ºC"},
@@ -68,12 +120,18 @@
      */
     function createSettings(topo) {
         var isFF = /firefox/i.test(navigator.userAgent);
-        var projection = createAlbersProjection(topo.bbox[0], topo.bbox[1], topo.bbox[2], topo.bbox[3], view);
+        var projection = createMapLibreProjection();
+        // Add invert method so we can go from pixel coords back to lng/lat
+        projection.invert = function(point) {
+            var ll = maplibreMap.unproject(point);
+            return [ll.lng, ll.lat];
+        };
         var bounds = createDisplayBounds(topo.bbox[0], topo.bbox[1], topo.bbox[2], topo.bbox[3], projection);
         var styles = [];
         var settings = {
             projection: projection,
             displayBounds: bounds,
+            topo: topo,
             particleCount: Math.round(bounds.height / 0.5),
             maxParticleAge: 60,  // max number of frames a particle is drawn before regeneration
             velocityScale: +(bounds.height / 700).toFixed(3),  // particle speed as number of pixels per unit vector
@@ -851,9 +909,6 @@
         d3.select(SHOW_LOCATION_ID).on("click", function() {
             plotCurrentPosition(settings.projection);
         });
-        // d3.select(STOP_ANIMATION_ID).on("click", function() {
-        //     settings.animate = false;
-        // });
         d3.select(DISPLAY_ID).on("click", function() {
             var p = d3.mouse(this);
             var c = settings.projection.invert(p);
@@ -867,6 +922,74 @@
                 d3.select(POINT_DETAILS_ID).node().innerHTML = pointDetails;
             }
         });
+
+        // Store references needed for rebuild on map move
+        var currentData = null;
+        var rebuildTimer = null;
+
+        // Expose rebuild function for MapLibre sync
+        rebuildLayers = function(data) {
+            if (data) currentData = data;
+            if (!currentData) return;
+
+            // Stop current animation
+            settings.animate = false;
+
+            // Update projection (it reads from maplibreMap automatically)
+            var projection = createMapLibreProjection();
+            projection.invert = function(point) {
+                var ll = maplibreMap.unproject(point);
+                return [ll.lng, ll.lat];
+            };
+            settings.projection = projection;
+
+            // Recalculate bounds
+            var topo = settings.topo;
+            settings.displayBounds = createDisplayBounds(
+                topo.bbox[0], topo.bbox[1], topo.bbox[2], topo.bbox[3], projection
+            );
+
+            // Clear existing renders
+            var mapSvg = d3.select(MAP_SVG_ID);
+            mapSvg.selectAll("*").remove();
+
+            var fieldCanvas = d3.select(FIELD_CANVAS_ID).node();
+            var fieldCtx = fieldCanvas.getContext("2d");
+            fieldCtx.clearRect(0, 0, fieldCanvas.width, fieldCanvas.height);
+
+            var overlayCanvas = d3.select(OVERLAY_CANVAS_ID).node();
+            var overlayCtx = overlayCanvas.getContext("2d");
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            // Rebuild meshes and re-render
+            var mesh = buildMeshes(topo, settings);
+            renderMap(mesh);
+            var masks = renderMasks(mesh, settings);
+
+            // Re-plot stations
+            plotStations(currentData, mesh);
+
+            // Re-interpolate field and animate
+            interpolateField(currentData, settings, masks).then(function(newField) {
+                field = newField;
+                settings.animate = true;
+                animate(settings, field);
+
+                // Re-draw overlay
+                drawOverlay(currentData, settings, masks).then(function(newOverlay) {
+                    overlay = newOverlay;
+                });
+            }, report);
+        };
+
+        // Listen for MapLibre map movements - debounced rebuild
+        maplibreMap.on("moveend", function() {
+            if (rebuildTimer) clearTimeout(rebuildTimer);
+            rebuildTimer = setTimeout(function() {
+                rebuildLayers(null);
+            }, 150);
+        });
+
     }
 
     function report(e) {
@@ -876,33 +999,42 @@
 
     // Let's try an experiment! Define a dependency graph of tasks and use promises to let the control flow occur
     // organically. Any errors will cause dependent tasks to be skipped.
+    // Wait for MapLibre to be ready before starting the pipeline, since the projection depends on it.
 
-    var topoTask         = loadJson(displayData.topography);
-    var dataTask         = loadJson(displayData.samples);
-    var initTask         = when.all([true                                 ]).then(apply(init));
-    var settingsTask     = when.all([topoTask                             ]).then(apply(createSettings));
-    var meshTask         = when.all([topoTask, settingsTask               ]).then(apply(buildMeshes));
-    var renderTask       = when.all([settingsTask, meshTask               ]).then(apply(render));
-    var plotStationsTask = when.all([dataTask, meshTask                   ]).then(apply(plotStations));
-    var overlayTask      = when.all([dataTask, settingsTask, renderTask   ]).then(apply(drawOverlay));
-    var fieldTask        = when.all([dataTask, settingsTask, renderTask   ]).then(apply(interpolateField));
-    var animateTask      = when.all([settingsTask, fieldTask              ]).then(apply(animate));
-    var postInitTask     = when.all([settingsTask, fieldTask, overlayTask ]).then(apply(postInit));
+    // Start loading data immediately (these don't depend on MapLibre)
+    var topoTask = loadJson(displayData.topography);
+    var dataTask = loadJson(displayData.samples);
 
-    // Register a catch-all error handler to log errors rather then let them slip away into the ether.... Cleaner way?
-    when.all([
-        topoTask,
-        dataTask,
-        initTask,
-        settingsTask,
-        meshTask,
-        renderTask,
-        plotStationsTask,
-        overlayTask,
-        fieldTask,
-        animateTask,
-        postInitTask
-    ]).then(null, report);
+    maplibreMap.on("load", function() {
+        var initTask         = when.all([true                                 ]).then(apply(init));
+        var settingsTask     = when.all([topoTask                             ]).then(apply(createSettings));
+        var meshTask         = when.all([topoTask, settingsTask               ]).then(apply(buildMeshes));
+        var renderTask       = when.all([settingsTask, meshTask               ]).then(apply(render));
+        var plotStationsTask = when.all([dataTask, meshTask                   ]).then(apply(plotStations));
+        var overlayTask      = when.all([dataTask, settingsTask, renderTask   ]).then(apply(drawOverlay));
+        var fieldTask        = when.all([dataTask, settingsTask, renderTask   ]).then(apply(interpolateField));
+        var animateTask      = when.all([settingsTask, fieldTask              ]).then(apply(animate));
+        var postInitTask     = when.all([dataTask, settingsTask, fieldTask, overlayTask]).then(apply(function(data, settings, field, overlay) {
+            postInit(settings, field, overlay);
+            // Store data reference for MapLibre-triggered rebuilds
+            if (rebuildLayers) rebuildLayers(data);
+        }));
+
+        // Register a catch-all error handler to log errors rather then let them slip away into the ether.... Cleaner way?
+        when.all([
+            topoTask,
+            dataTask,
+            initTask,
+            settingsTask,
+            meshTask,
+            renderTask,
+            plotStationsTask,
+            overlayTask,
+            fieldTask,
+            animateTask,
+            postInitTask
+        ]).then(null, report);
+    });
 
 })();
 
