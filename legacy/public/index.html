@@ -37,6 +37,7 @@
             <h2 id="point-details">&nbsp;</h2>
         </div>
         <div id="arrow">↓</div>
+        <div id="notice">世界風速は<a href="http://earth.nullschool.net/jp">こちら</a></div>
     </div>
 
     <div id="about">
@@ -71,38 +72,22 @@
             <a href="/map/wind/2013/09/01/16">雷雨</a>,
             <a href="/map/hum/2013/10/16/08">台風26号+湿度</a>,
             <a href="/map/hum/2013/10/16/11">台風26号後+湿度</a></p>
+        <p>Air Data | <a href="http://www.kankyo.metro.tokyo.jp">東京都環境局環境改善部大気保全課</a></p>
+        <p>Map Data |
+            <a href="http://www.mlit.go.jp/kokudoseisaku/gis">国土数値情報（行政区域データ）国土交通省</a></p>
+        <p>Author |
+            Cameron Beccario <a href="https://twitter.com/cambecc">@cambecc</a>,
+            <a href="https://www.facebook.com/fuusoku">Facebook</a>, <a href="http://b.hatena.ne.jp/entry/air.nullschool.net/">はてな</a></p>
+        <p>Source | <a href="https://github.com/cambecc/air">github.com/cambecc/air</a></p>
+        <p>Modules |
+            <a href="http://nodejs.org/">node.js</a>,
+            <a href="http://d3js.org/">D3.js</a>,
+            <a href="https://github.com/cujojs/when">when.js</a>,
+            <a href="https://github.com/brianc/node-postgres">node-postgres</a></p>
+        <p>Inspiration | <a href="http://hint.fm/wind/">HINT.FM wind map</a></p>
+        <p>免責事項 | 正確な情報を提供するためのものではありません</p>
     </div>
 
-    <div id="info-button" title="Info">&#9432;</div>
-
-    <div id="info-modal">
-        <div id="info-modal-content">
-            <span id="info-modal-close">&times;</span>
-            <h1>Info</h1>
-            <p>Air Data | <a href="https://www.taiki.kankyo.metro.tokyo.lg.jp/taikikankyo/realtime/index.html">東京都環境局環境改善部大気保全課</a></p>
-            <p>Map Data |
-                <a href="http://www.mlit.go.jp/kokudoseisaku/gis">国土数値情報（行政区域データ）国土交通省</a></p>
-            <p>Original Map Author |
-                Cameron Beccario <a href="https://twitter.com/cambecc">@cambecc</a></p>
-            <p>Original Data Source | <a href="https://github.com/cambecc/air">github.com/cambecc/air</a></p>
-            <p>Modules |
-                <a href="http://d3js.org/">D3.js</a>,
-                <a href="https://github.com/cujojs/when">when.js</a></p>
-            <p>Inspiration | <a href="http://hint.fm/wind/">HINT.FM wind map</a></p>
-            <p>免責事項 | 正確な情報を提供するためのものではありません</p>
-        </div>
-    </div>
-
-    <script>
-        (function() {
-            var btn = document.getElementById("info-button");
-            var modal = document.getElementById("info-modal");
-            var close = document.getElementById("info-modal-close");
-            btn.addEventListener("click", function() { modal.style.display = "block"; });
-            close.addEventListener("click", function() { modal.style.display = "none"; });
-            modal.addEventListener("click", function(e) { if (e.target === modal) modal.style.display = "none"; });
-        })();
-    </script>
     <script src="/js/when.js" charset="utf-8"></script>
     <script src="/js/d3.v3.js" charset="utf-8"></script>
     <script src="/js/topojson.v1.js" charset="utf-8"></script>

@@ -37,57 +37,94 @@
             <h2 id="point-details">&nbsp;</h2>
         </div>
         <div id="arrow">↓</div>
-        <div id="notice">世界風速は<a href="http://earth.nullschool.net/jp">こちら</a></div>
     </div>
 
-    <div id="about">
-        <h1>About</h1>
-        <span>Control | </span>
-            <span class="text-button" id="previous-day">«前日</span><span> – </span>
-            <span class="text-button" id="previous-hour">1時間前</span><span> – </span>
-            <span class="text-button" id="next-hour">1時間後</span><span> – </span>
-            <span class="text-button" id="next-day">翌日»</span><span> – </span>
-            <span class="text-button" id="current-conditions">最新</span><span> – </span>
-            <span class="text-button" id="show-location">現在地</span><p></p>
-        <span>Overlay | </span>
-            <span class="text-button" id="wind">None</span><span> – </span>
-            <span class="text-button" id="temp">Temp</span><span> – </span>
-            <span class="text-button" id="hum">Hum</span><span> – </span>
-            <span class="text-button" id="wv">WV</span><span> – </span>
-            <span class="text-button" id="in">IN</span><span> – </span>
-            <span class="text-button" id="no">NO</span><span> – </span>
-            <span class="text-button" id="no2">NO<span class="sub">2</span></span><span> – </span>
-            <span class="text-button" id="nox">NO<span class="sub">X</span></span><p></p>
-        <span style="visibility: hidden">Overlay | </span>
-            <span class="text-button" id="ox">O<span class="sub">X</span></span><span> – </span>
-            <span class="text-button" id="so2">SO<span class="sub">2</span></span><span> – </span>
-            <span class="text-button" id="co">CO</span><span> – </span>
-            <span class="text-button" id="ch4">CH<span class="sub">4</span></span><span> – </span>
-            <span class="text-button" id="nmhc">NMHC</span><span> – </span>
-            <span class="text-button" id="spm">SPM</span><span> – </span>
-            <span class="text-button" id="pm25">PM<span class="sub">2.5</span></span><p></p>
-        <p>Gallery |
-            <a href="/map/wind/2013/09/22/01">無風</a>,
-            <a href="/map/wind/2013/08/21/15">そよ風</a>,
-            <a href="/map/wind/2013/09/01/16">雷雨</a>,
-            <a href="/map/hum/2013/10/16/08">台風26号+湿度</a>,
-            <a href="/map/hum/2013/10/16/11">台風26号後+湿度</a></p>
-        <p>Air Data | <a href="http://www.kankyo.metro.tokyo.jp">東京都環境局環境改善部大気保全課</a></p>
-        <p>Map Data |
-            <a href="http://www.mlit.go.jp/kokudoseisaku/gis">国土数値情報（行政区域データ）国土交通省</a></p>
-        <p>Author |
-            Cameron Beccario <a href="https://twitter.com/cambecc">@cambecc</a>,
-            <a href="https://www.facebook.com/fuusoku">Facebook</a>, <a href="http://b.hatena.ne.jp/entry/air.nullschool.net/">はてな</a></p>
-        <p>Source | <a href="https://github.com/cambecc/air">github.com/cambecc/air</a></p>
-        <p>Modules |
-            <a href="http://nodejs.org/">node.js</a>,
-            <a href="http://d3js.org/">D3.js</a>,
-            <a href="https://github.com/cujojs/when">when.js</a>,
-            <a href="https://github.com/brianc/node-postgres">node-postgres</a></p>
-        <p>Inspiration | <a href="http://hint.fm/wind/">HINT.FM wind map</a></p>
-        <p>免責事項 | 正確な情報を提供するためのものではありません</p>
+    <div id="color-bar"><canvas id="color-bar-canvas"></canvas><span id="color-bar-label"></span></div>
+    <div id="controls">
+        <div class="control-group">
+            <span class="control-label">Time</span>
+            <div class="pill-group">
+                <span class="pill" id="previous-day">&#171; Day</span>
+                <span class="pill" id="previous-hour">&#171; Hr</span>
+                <span class="pill active" id="current-conditions">Now</span>
+                <span class="pill" id="next-hour">Hr &#187;</span>
+                <span class="pill" id="next-day">Day &#187;</span>
+                <span class="pill" id="show-location">&#9678;</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <span class="control-label">Overlay</span>
+            <div class="pill-group">
+                <span class="pill active" id="wind">None</span>
+                <span class="pill" id="temp">Temp</span>
+                <span class="pill" id="hum">Hum</span>
+                <span class="pill" id="wv">WV</span>
+                <span class="pill" id="in">IN</span>
+                <span class="pill" id="pm25">PM2.5</span>
+                <span class="pill" id="spm">SPM</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <span class="control-label">Gas</span>
+            <div class="pill-group">
+                <span class="pill" id="ox">Ox</span>
+                <span class="pill" id="no">NO</span>
+                <span class="pill" id="no2">NO2</span>
+                <span class="pill" id="nox">NOx</span>
+                <span class="pill" id="so2">SO2</span>
+                <span class="pill" id="co">CO</span>
+                <span class="pill" id="ch4">CH4</span>
+                <span class="pill" id="nmhc">NMHC</span>
+            </div>
+        </div>
     </div>
 
+    <div id="info-button" title="Info">&#9432;</div>
+
+    <div id="info-modal">
+        <div id="info-modal-content">
+            <span id="info-modal-close">&times;</span>
+            <h1>Info</h1>
+            <p>Air Data | <a href="https://www.taiki.kankyo.metro.tokyo.lg.jp/taikikankyo/realtime/index.html">東京都環境局環境改善部大気保全課</a></p>
+            <p>Map Data |
+                <a href="http://www.mlit.go.jp/kokudoseisaku/gis">国土数値情報（行政区域データ）国土交通省</a></p>
+            <p>Original Map Author |
+                Cameron Beccario <a href="https://twitter.com/cambecc">@cambecc</a></p>
+            <p>Original Data Source | <a href="https://github.com/cambecc/air">github.com/cambecc/air</a></p>
+            <p>Modules |
+                <a href="http://d3js.org/">D3.js</a>,
+                <a href="https://github.com/cujojs/when">when.js</a></p>
+            <p>Inspiration | <a href="http://hint.fm/wind/">HINT.FM wind map</a></p>
+            <p>免責事項 | 正確な情報を提供するためのものではありません</p>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // Info modal
+            var btn = document.getElementById("info-button");
+            var modal = document.getElementById("info-modal");
+            var close = document.getElementById("info-modal-close");
+            btn.addEventListener("click", function() { modal.style.display = "block"; });
+            close.addEventListener("click", function() { modal.style.display = "none"; });
+            modal.addEventListener("click", function(e) { if (e.target === modal) modal.style.display = "none"; });
+
+            // Overlay pill active state - set from data-type on page load
+            var overlayIds = ["wind","temp","hum","wv","in","pm25","spm","ox","no","no2","nox","so2","co","ch4","nmhc"];
+            var display = document.getElementById("display");
+            var currentType = display ? display.getAttribute("data-type") : "wind";
+            overlayIds.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                // Set active based on current data-type
+                if (id === currentType) {
+                    el.classList.add("active");
+                } else {
+                    el.classList.remove("active");
+                }
+            });
+        })();
+    </script>
     <script src="/js/when.js" charset="utf-8"></script>
     <script src="/js/d3.v3.js" charset="utf-8"></script>
     <script src="/js/topojson.v1.js" charset="utf-8"></script>

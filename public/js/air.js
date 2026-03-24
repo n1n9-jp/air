@@ -74,8 +74,8 @@
         var settings = {
             projection: projection,
             displayBounds: bounds,
-            particleCount: Math.round(bounds.height / 0.24),
-            maxParticleAge: 40,  // max number of frames a particle is drawn before regeneration
+            particleCount: Math.round(bounds.height / 0.5),
+            maxParticleAge: 60,  // max number of frames a particle is drawn before regeneration
             velocityScale: +(bounds.height / 700).toFixed(3),  // particle speed as number of pixels per unit vector
             fieldMaskWidth: isFF ? 2 : Math.ceil(bounds.height * 0.06),  // Wide strokes on FF are very slow
             fadeFillStyle: isFF ? "rgba(0, 0, 0, 0.95)" : "rgba(0, 0, 0, 0.97)",  // FF Mac alpha behaves differently
@@ -750,6 +750,8 @@
      */
     function drawOverlay(data, settings, masks) {
         if (!overlayType) {
+            var barHide = document.getElementById("color-bar");
+            if (barHide) barHide.classList.remove("visible");
             return when.resolve(null);
         }
 
@@ -785,11 +787,23 @@
         var yBound = bounds.y + bounds.height;  // upper bound (exclusive)
         var x = bounds.x;
 
-        // Draw color scale for reference.
-        var n = view.width / 5;
-        for (var i = n; i >= 0; i--) {
-            g.fillStyle = asRainbowColorStyle((1 - (i / n)), 0.9);
-            g.fillRect(view.width - 10 - i, view.height - 20, 1, 10);
+        // Draw color scale in the dedicated color-bar element instead of on the overlay canvas.
+        var barEl = document.getElementById("color-bar");
+        var barCanvas = document.getElementById("color-bar-canvas");
+        var barLabel = document.getElementById("color-bar-label");
+        if (barEl && barCanvas) {
+            barEl.classList.add("visible");
+            var barW = barCanvas.clientWidth || 200;
+            barCanvas.width = barW;
+            barCanvas.height = 6;
+            var bg = barCanvas.getContext("2d");
+            for (var i = 0; i < barW; i++) {
+                bg.fillStyle = asRainbowColorStyle(i / barW, 0.9);
+                bg.fillRect(i, 0, 1, 6);
+            }
+            if (barLabel && overlayType) {
+                barLabel.textContent = overlayType.label;
+            }
         }
 
         // Draw a column by interpolating a value for each point and painting a 2x2 rectangle

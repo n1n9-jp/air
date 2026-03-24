@@ -60,16 +60,12 @@ body {
 
 #details {
     position: absolute;
-    bottom: 3%;
+    bottom: 50px;
     left: 2%;
 }
 
 #arrow {
-    position: absolute;
-    bottom: 1%;
-    left: 2%;
-    color: #888;
-    font-size: 1.0em;
+    display: none;
 }
 
 #notice {
@@ -80,10 +76,96 @@ body {
 }
 
 #about {
-    margin-top: 1.25em;
-    padding-bottom: 1em;
-    position: absolute;
-    left: 2%;
+    display: none;
+}
+
+#color-bar {
+    display: none;
+    position: fixed;
+    bottom: 38px;
+    left: 0;
+    right: 0;
+    height: 14px;
+    z-index: 49;
+    padding: 0 10px;
+    align-items: center;
+    gap: 6px;
+}
+
+#color-bar.visible {
+    display: flex;
+}
+
+#color-bar-canvas {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+}
+
+#color-bar-label {
+    font-size: 0.6em !important;
+    color: #888;
+    white-space: nowrap;
+}
+
+#controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 50;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.control-label {
+    font-size: 0.7em !important;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: 2px;
+    white-space: nowrap;
+}
+
+.pill-group {
+    display: flex;
+    gap: 2px;
+}
+
+.pill {
+    font-size: 0.7em !important;
+    padding: 3px 7px;
+    border: 1px solid #444;
+    border-radius: 10px;
+    color: #888;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+    transition: all 100ms ease;
+    line-height: 1.2;
+}
+
+.pill:hover {
+    color: #fff;
+    border-color: #888;
+}
+
+.pill.active {
+    color: #fff;
+    background: #335;
+    border-color: #668;
 }
 
 h1, h2 {
@@ -132,4 +214,68 @@ a:hover, a:focus {
     color: #fff;
     transition: color 25ms ease-in;
     -webkit-transition: color 25ms ease-in;
+}
+
+#info-button {
+    position: fixed;
+    bottom: 12px;
+    right: 12px;
+    font-size: 1.6em;
+    color: #888;
+    cursor: pointer;
+    z-index: 100;
+    user-select: none;
+    line-height: 1;
+}
+
+#info-button:hover {
+    color: #fff;
+    transition: color 125ms ease-in;
+}
+
+#info-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 200;
+}
+
+#info-modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 1.5em 2em;
+    max-width: 520px;
+    width: 90%;
+}
+
+#info-modal-content h1 {
+    margin-bottom: 0.4em;
+}
+
+#info-modal-content p {
+    margin: 0.3em 0;
+    line-height: 1.6;
+}
+
+#info-modal-close {
+    position: absolute;
+    top: 8px;
+    right: 14px;
+    font-size: 1.8em;
+    color: #888;
+    cursor: pointer;
+    line-height: 1;
+}
+
+#info-modal-close:hover {
+    color: #fff;
 }
