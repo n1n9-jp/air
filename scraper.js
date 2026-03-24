@@ -1,114 +1,85 @@
 /**
- * scraper - a set of utility methods to make scraping HTML easier
+ * scraper - fetches air quality data from the Tokyo Metropolitan Government's JSON API.
+ *
+ * The new data source (taiki.kankyo.metro.tokyo.lg.jp) provides data as JSON files
+ * instead of the old Shift_JIS HTML pages, so HTML parsing is no longer needed.
  */
 
 "use strict";
 
 var when = require("when");
-var http = require("http");
-var htmlparser = require("htmlparser");
+var https = require("https");
 var tool = require("./tool");
 var log = tool.log();
 
-/**
- * Converts the provided HTML text into a dom.
- *
- * @param {string} text
- * @returns {Object} object representing the dom
- */
-exports.parseHTML = function(text) {
-    var handler = new htmlparser.DefaultHandler(null, {verbose: false, ignoreWhitespace: true});
-    new htmlparser.Parser(handler).parseComplete(text);
-    return handler.dom;
-}; var parseHTML = exports.parseHTML;
+var BASE_URL = "https://www.taiki.kankyo.metro.tokyo.lg.jp/taikikankyo/data";
 
 /**
- * Returns all <table> tags contained in the provided dom as elements in an array.
+ * Performs an HTTPS GET and parses the JSON response. The result is a promise for the parsed object.
  *
- * @param {Object} dom a parse tree obtained from calling the parseHTML function.
- * @returns {Array} an array of all tables and their associated sub trees.
+ * @param {string} url the URL to fetch
+ * @returns {promise} a promise for the parsed JSON object
  */
-exports.tablesOf = function(dom) {
-    return htmlparser.DomUtils.getElements({tag_type: "tag", tag_name: "table"}, dom);
-}
-
-/**
- * Returns all text nodes contained in the provided dom as elements in an array.
- *
- * @param {Object} dom a parse tree obtained from calling the parseHTML function.
- * @returns {Array} a flattened array of all text nodes.
- */
-exports.textsOf = function(dom) {
-    return htmlparser.DomUtils.getElements({tag_type: "text"}, dom);
-}; var textsOf = exports.textsOf;
-
-/**
- * Returns all <tr> tags contained in the provided dom, presumably a tree rooted with a table node.
- *
- * @param {Object} dom a parse tree obtained from calling the parseHTML function.
- * @returns {Array} an array of all rows and their associated sub trees.
- */
-exports.rowsOf = function(dom) {
-    return htmlparser.DomUtils.getElements({tag_type: "tag", tag_name: "tr"}, dom);
-}; var rowsOf = exports.rowsOf;
-
-/**
- * Given an html table comprised of rows having the <tr> tag, return a two-dimensional array of all cell values.
- *
- * @param {Object} table a parse tree obtained from calling the parseHTML function.
- * @returns {Array} an array of rows, each row being an array of trimmed text values.
- */
-exports.extract = function(table) {
-    return rowsOf(table).map(function(row) {
-        return textsOf(row).map(function(text) {
-            return text.data.trim();
-        });
-    });
-}
-
-/**
- * Returns the match results of all text nodes in the provided dom, satisfying the specified regex, as elements
- * in an array.
- *
- * @param regex a regular expression.
- * @param {Object} dom a parse tree obtained from calling the parseHTML function.
- * @returns {Array} an array of regex match results.
- */
-exports.matchText = function(regex, dom) {
-    var results = [];
-    function matchForRegex(data) {
-        var match = data.match(regex);
-        return match ? results.push(match) : false;
-    }
-    htmlparser.DomUtils.getElements({tag_type: "text", tag_contains: matchForRegex}, dom);
-    return results;
-}
-
-/**
- * Performs an http GET and parses the HTML into a dom. The result is a promise for the dom.
- *
- * @param options same as those taken by the http.request method.
- * @param [converter] a callback that takes a buffer and converts it to another format.
- * @returns {promise} a promise for the parsed dom of the specified url
- */
-exports.fetch = function(options, converter) {
-    converter = converter || function nop(buffer) { return buffer; };
+exports.fetchJSON = function(url) {
     var d = when.defer();
-    log.info("get: " + options);
-    http.get(options, function(response) {
+    log.info("get: " + url);
+    https.get(url, function(response) {
         var chunks = [];
         response.on("data", function(chunk) {
             chunks.push(chunk);
         });
         response.on("end", function() {
-            log.info("got: " + options);
-            var converted = converter(Buffer.concat(chunks));
-            var parsed = parseHTML(converted);
-            log.info("done: " + options);
-            d.resolve(parsed);
+            log.info("got: " + url);
+            try {
+                var text = Buffer.concat(chunks).toString("utf-8");
+                var parsed = JSON.parse(text);
+                log.info("done: " + url);
+                d.resolve(parsed);
+            } catch (e) {
+                d.reject(new Error("Failed to parse JSON from " + url + ": " + e.message));
+            }
         });
     }).on("error", function(error) {
         d.reject(error);
     });
     return d.promise;
-}
+};
+
+/**
+ * Fetches the property configuration (available time range, etc.)
+ *
+ * @returns {promise} a promise for the V505Property object
+ */
+exports.fetchProperty = function() {
+    return exports.fetchJSON(BASE_URL + "/V505Property.json");
+};
+
+/**
+ * Fetches the station master data.
+ *
+ * @returns {promise} a promise for the V501Station object
+ */
+exports.fetchStations = function() {
+    return exports.fetchJSON(BASE_URL + "/V501Station.json");
+};
+
+/**
+ * Fetches the wind direction master data.
+ *
+ * @returns {promise} a promise for the V504Wd object
+ */
+exports.fetchWindDirections = function() {
+    return exports.fetchJSON(BASE_URL + "/V504Wd.json");
+};
+
+/**
+ * Fetches hourly measurement data for the specified date/hour.
+ *
+ * @param {string} dateHour in YYYYMMDDHH format
+ * @returns {promise} a promise for the hourly data object
+ */
+exports.fetchHourlyData = function(dateHour) {
+    var ym = dateHour.substring(0, 6);
+    var url = BASE_URL + "/hour/" + ym + "/" + dateHour + ".json";
+    return exports.fetchJSON(url);
+};

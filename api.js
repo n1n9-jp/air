@@ -34,7 +34,7 @@ var tool = require("./tool");
 var log = tool.log();
 
 var port = process.argv[2];
-var ruleFile = process.argv[5];
+var ruleFile = process.argv[4];
 
 var validSampleTypes = schema.samples.columns.map(function(column) { return column.name; });
 var validOverlays = _.reject(validSampleTypes, function(s) {

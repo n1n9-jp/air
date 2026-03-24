@@ -1,0 +1,17 @@
+{
+    "name": "air-tokyo-cloudflare",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Tokyo Air Quality Visualization - Cloudflare Workers + D1 + Pages",
+    "scripts": {
+        "dev": "wrangler pages dev public/ --d1 DB",
+        "deploy": "wrangler pages deploy public/",
+        "deploy:cron": "wrangler deploy --config wrangler-cron.toml",
+        "db:create": "wrangler d1 create air-tokyo-db",
+        "db:migrate": "wrangler d1 migrations apply air-tokyo-db",
+        "db:seed": "wrangler d1 execute air-tokyo-db --file=migrations/0002_seed_stations.sql"
+    },
+    "devDependencies": {
+        "wrangler": "^3.0.0"
+    }
+}

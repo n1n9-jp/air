@@ -1,0 +1,11 @@
+name = "air-tokyo-cron"
+main = "src/cron-handler.js"
+compatibility_date = "2024-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "air-tokyo-db"
+database_id = "ff69e164-b957-4cef-8c64-7bd65bec3795"
+
+[triggers]
+crons = ["0 * * * *"] # 毎時0分に実行
