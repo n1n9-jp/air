@@ -50,12 +50,53 @@ body {
 
 #display {
     position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#maplibre-map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+#map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 1;
 }
 
 #field, #overlay {
     position: absolute;
     top: 0;
     left: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* MapLibre controls dark theme */
+.maplibregl-ctrl-group {
+    background: rgba(0, 0, 0, 0.7) !important;
+    border: 1px solid #444 !important;
+}
+
+.maplibregl-ctrl-group button {
+    background-color: transparent !important;
+    filter: invert(1);
+}
+
+.maplibregl-ctrl-group button + button {
+    border-top: 1px solid #444 !important;
+}
+
+.maplibregl-ctrl-attrib {
+    display: none !important;
 }
 
 #details {

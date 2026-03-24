@@ -12,6 +12,7 @@
     <link rel="apple-touch-icon" sizes="120x120" href="/iphone-icon.png"/>
     <link rel="apple-touch-icon" sizes="152x152" href="/ipad-icon.png"/>
     <link rel="stylesheet" type="text/css" href="/css/styles.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css"/>
 </head>
 <body>
 
@@ -19,6 +20,7 @@
 
     <div id="display" data-topography="/data/tokyo-topo.json" data-samples="/data/wind/current"
                       data-type="wind" data-date="">
+        <div id="maplibre-map"></div>
         <div id="map">
             <svg id="map-svg" xmlns="http://www.w3.org/2000/svg" version="1.1"></svg>
         </div>
@@ -125,6 +127,7 @@
             });
         })();
     </script>
+    <script src="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js"></script>
     <script src="/js/when.js" charset="utf-8"></script>
     <script src="/js/d3.v3.js" charset="utf-8"></script>
     <script src="/js/topojson.v1.js" charset="utf-8"></script>
