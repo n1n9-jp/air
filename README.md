@@ -1,91 +1,87 @@
-air
+air - データソース
 ===
 
-"air" is a project to visualize live air quality data provided by the Tokyo Metropolitan
-Government. The main components of the project are:
-   * a scraper to extract air data from [www.kankyo.metro.tokyo.jp](http://www.kankyo.metro.tokyo.jp)
-   * a postgres database to store the data
-   * an express.js server to serve this data and other static files to the client
-   * a client app that interpolates the data and renders an animated wind map
+地図上に描画されるデータは、以下の3つのソースから構成されています。
 
-An instance of "air" is available at http://air.nullschool.net. It is currently hosted
-by [Amazon Web Services](http://aws.amazon.com) and fronted by
-[CloudFlare](https://www.cloudflare.com).
+## 1. 地理データ（東京の地図）
 
-"air" is a personal project I've used to learn javascript, node.js, when.js, postgres, D3
-and browser programming. Some of the design decisions were made simply to try something new
-(e.g., postgres). Undoubtedly, other decisions were made from a lack of experience. Feedback
-welcome!
+| 項目 | 内容 |
+|------|------|
+| ファイル | `public/data/tokyo-topo.json` |
+| 元データ | 国土交通省 国土数値情報（約80MBのXML） |
+| 形式 | TopoJSON（約300KB） |
+| 変換ツール | `ksj/ksj.js` |
 
-building and launching
-----------------------
+国土交通省の国土数値情報ダウンロードサービスから取得した東京都の行政区域データを、
+`ksj/ksj.js` でTopoJSON形式に変換しています。クライアント側で [D3.js](http://d3js.org/)
+によりSVGとして描画されます。
 
-Clone the project and install libraries from npm:
+## 2. 大気質・風向風速データ（リアルタイム）
 
-    npm install
+| 項目 | 内容 |
+|------|------|
+| データ元 | ~~東京都環境局 `www.kankyo.metro.tokyo.jp`~~ （現在は接続不可） |
+| スクレイパー | `scraper.js` / `server.js` |
+| エンコード | Shift_JIS → UTF-8 に変換 |
+| 更新頻度 | 1時間ごとにポーリング |
 
-NOTE: you will need [libpq](http://www.postgresql.org/docs/9.3/static/libpq.html) to
-build [pg](https://github.com/brianc/node-postgres). The libpq library was installed
-automatically by postgres on Mac OS X but required separate installation on AWS.
+> **注意（2026年3月確認）：** 旧データソース `www.kankyo.metro.tokyo.jp` は現在接続できません。
+> 東京都の大気環境データは以下の新サイトに移行しています：
+>
+> https://www.taiki.kankyo.metro.tokyo.lg.jp/taikikankyo/realtime/index.html
+>
+> 新サイトでも同等のデータ（大気汚染物質、風向・風速、気温・湿度・日射量）が1時間ごとに提供されていますが、
+> HTML構造やエンコードが異なるため、スクレイパー（`scraper.js` / `server.js`）の改修が必要です。
 
-Install postgres and create a database, something like:
+東京都環境局のサイト（`p160.cgi`）からShift_JISエンコードのHTMLをスクレイピングし、
+パースしてPostgreSQLに保存しています。
 
-    CREATE DATABASE air
-      WITH OWNER = postgres
-           ENCODING = 'UTF8'
-           TABLESPACE = pg_default
-           LC_COLLATE = 'en_US.UTF-8'
-           LC_CTYPE = 'en_US.UTF-8'
-           CONNECTION LIMIT = -1;
+**取得データ一覧：**
 
-Launch the server:
+| カテゴリ | 項目 |
+|----------|------|
+| 大気汚染物質 | SO2, NO, NO2, NOx, Ox, CO, SPM, PM2.5, CH4, NMHC |
+| 風 | 風向(wd), 風速(wv) |
+| 気象 | 気温(temp), 湿度(hum), 日射量(in) |
 
-    node server.js <port> <postgres-connection-string> <air-data-url>
+**APIエンドポイント：**
 
-Example:
+| エンドポイント | 説明 |
+|----------------|------|
+| `/data/wind/current` | 現在の風データ |
+| `/data/wind/{year}/{month}/{day}/{hour}` | 過去の風データ |
+| `/data/{sampleType}/current` | 現在の各種測定データ |
+| `/data/{sampleType}/{year}/{month}/{day}/{hour}` | 過去の各種測定データ |
+| `/data/stations` | 全測定局の情報 |
 
-    node server.js 8080 postgres://postgres:12345@localhost:5432/air <air-data-url>
+## 3. 測定局データ
 
-Finally, point the browser at the server:
+| 項目 | 内容 |
+|------|------|
+| ファイル | `station-data.json` |
+| 局数 | 約50か所 |
+| 内容 | 測定局ID、名称、住所、緯度・経度 |
 
-    http://localhost:8080
+## データフロー
 
-implementation notes
---------------------
+```
+東京都環境局サイト → スクレイパー(scraper.js) → PostgreSQL → Express.js API → クライアント(air.js)
+                                                                                    ↓
+国土交通省XML → TopoJSON変換(ksj.js) → tokyo-topo.json ──────────────────────→ D3.js で地図描画
+                                                                                    ↓
+                                                                         IDW/TPS補間 → Canvas上にアニメーション描画
+```
 
-Building this project required solutions to some interesting problems. Here are a few:
+## 主要ファイル一覧
 
-   * Live air data is available as Shift_JIS encoded HTML. Node.js does not natively
-     support Shift_JIS, so the [iconv](https://github.com/bnoordhuis/node-iconv) library
-     is used to perform the conversion to UTF-8.
-   * Geographic data of Tokyo was sourced directly from the Ministry of Land,
-     Infrastructure, Transport and Tourism, as an 80MB XML file. This data was transformed
-     to a 300KB [TopoJSON](https://github.com/mbostock/topojson) file, small
-     enough for browsers to download and render as SVG with [D3](http://d3js.org/).
-   * Roughly 50 sampling stations provide hourly wind and pollutant data.
-     [Inverse Distance Weighting](http://en.wikipedia.org/wiki/Inverse_distance_weighting)
-     interpolation is used to construct a wind vector field that covers all of Tokyo. IDW
-     produces strange artifacts and is considered obsolete, but it is very simple and was
-     easy to extend to perform vector interpolation.
-   * The browser interpolates each point (x, y) using the n-closest sampling stations. To
-     determine the n-closest neighbors, the client constructs a [k-d tree](
-     http://en.wikipedia.org/wiki/K-d_tree), which greatly improves the performance.
-   * Pollutant visualization overlays use [Thin Plate Spline](http://en.wikipedia.org/wiki/Thin_plate_spline)
-     interpolation. TPS is definitely the wrong method to use for natural phenomenon such
-     as air pollutants, but it produces a smoother surface than IDW.
-   * The SVG map of Tokyo is overlaid with an HTML5 Canvas, where the animation is drawn.
-     The animation renderer needs to know where the borders of Tokyo are rendered by the
-     SVG engine, but this pixel-for-pixel information is difficult to obtain directly
-     from the SVG elements. To workaround this problem, Tokyo's polygons are re-rendered
-     to a detached Canvas element, and the Canvas' pixels operate as a mask to distinguish
-     points that lie inside the map to those outside. The field mask occupies the red
-     color channel, and the display mask is encoded in the green color channel.
-   * I used [when.js](https://github.com/cujojs/when) in the browser because it was a fun
-     experiment.
-
-inspiration
------------
-
-The awesome [wind map at hint.fm](http://hint.fm/wind/) provided the main inspiration for
-this project. And the very nice D3 tutorial [Let's Make a Map](http://bost.ocks.org/mike/map/)
-showed how easy it was to get started.
+| ファイル | 説明 |
+|----------|------|
+| `server.js` | メインサーバー、スクレイパー制御、定期更新 |
+| `scraper.js` | HTMLパース・データ抽出ユーティリティ |
+| `api.js` | Express.jsルーティング・APIエンドポイント |
+| `schema.js` | PostgreSQLテーブル定義 |
+| `station-data.json` | 測定局の位置・メタデータ |
+| `ksj/ksj.js` | 国土数値情報XML → TopoJSON変換ツール |
+| `public/js/air.js` | クライアント側の可視化・データ読込・アニメーション |
+| `public/js/mvi.js` | 多変量補間アルゴリズム（IDW, TPS） |
+| `public/data/tokyo-topo.json` | 東京の地理境界データ（TopoJSON） |
