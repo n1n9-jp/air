@@ -40,11 +40,11 @@ Install postgres and create a database, something like:
 
 Launch the server:
 
-    node server.js <port> <postgres-connection-string> <air-data-url>
+    node server.js <port> <postgres-connection-string>
 
 Example:
 
-    node server.js 8080 postgres://postgres:12345@localhost:5432/air <air-data-url>
+    node server.js 8080 postgres://postgres:12345@localhost:5432/air
 
 Finally, point the browser at the server:
 
