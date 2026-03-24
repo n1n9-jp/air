@@ -391,16 +391,26 @@
      */
     function plotStations(data, mesh) {
         // Convert station data to GeoJSON format.
+        // Show only stations that have data for the current overlay type.
+        var type = displayData.type;
         var features = [];
         data[0].samples.forEach(function(e) {
-            if (isValidSample(e.wind)) {
+            var hasData = false;
+            if (type === "wind") {
+                hasData = isValidSample(e.wind);
+            } else if (e[type] != null && isFinite(e[type])) {
+                hasData = true;
+            } else {
+                hasData = isValidSample(e.wind);
+            }
+            if (hasData) {
                 features.push({
                     type: "Features",
                     properties: {name: e.stationId.toString()},
                     geometry: {type: "Point", coordinates: e.coordinates}});
             }
         });
-        mesh.path.pointRadius(1);
+        mesh.path.pointRadius(4);
         d3.select(MAP_SVG_ID).append("path")
             .datum({type: "FeatureCollection", features: features})
             .attr("class", "station")
