@@ -423,7 +423,7 @@
                     geometry: {type: "Point", coordinates: e.coordinates}});
             }
         });
-        mesh.path.pointRadius(4);
+        mesh.path.pointRadius(2);
         d3.select(MAP_SVG_ID).append("path")
             .datum({type: "FeatureCollection", features: features})
             .attr("class", "station")
