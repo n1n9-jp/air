@@ -206,7 +206,7 @@
     function createAlbersProjection(lng0, lat0, lng1, lat1, view) {
         // Construct a unit projection centered on the bounding box. NOTE: center calculation will not be correct
         // when the bounding box crosses the 180th meridian. Don't expect that to happen to Tokyo for a while...
-        var projection = d3.geo.albers()
+        var projection = d3.geoAlbers()
             .rotate([-((lng0 + lng1) / 2), 0]) // rotate the globe from the prime meridian to the bounding box's center
             .center([0, (lat0 + lat1) / 2])    // set the globe vertically on the bounding box's center
             .scale(1)
@@ -244,12 +244,10 @@
      */
     function loadJson(resource) {
         var d = when.defer();
-        d3.json(resource, function(error, result) {
-            return error ?
-                !error.status ?
-                    d.reject({error: -1, message: "Cannot load resource: " + resource, resource: resource}) :
-                    d.reject({error: error.status, message: error.statusText, resource: resource}) :
-                d.resolve(result);
+        d3.json(resource).then(function(result) {
+            d.resolve(result);
+        }).catch(function(error) {
+            d.reject({error: error.status || -1, message: error.message || "Cannot load resource", resource: resource});
         });
         return d.promise;
     }
@@ -294,7 +292,7 @@
     function buildMeshes(topo, settings) {
         displayStatus("building meshes...");
         log.time("building meshes");
-        var path = d3.geo.path().projection(settings.projection);
+        var path = d3.geoPath().projection(settings.projection);
         var outerBoundary = topojson.mesh(topo, topo.objects.main, function(a, b) { return a === b; });
         var divisionBoundaries = topojson.mesh(topo, topo.objects.main, function (a, b) { return a !== b; });
         log.timeEnd("building meshes");
@@ -334,7 +332,7 @@
         var canvas = document.createElement("canvas");  // create detached canvas
         d3.select(canvas).attr("width", view.width).attr("height", view.height);
         var g = canvas.getContext("2d");
-        var path = d3.geo.path().projection(settings.projection).context(g);  // create a path for the canvas
+        var path = d3.geoPath().projection(settings.projection).context(g);  // create a path for the canvas
 
         path(mesh.outerBoundary);  // define the border
 
@@ -864,8 +862,8 @@
         // d3.select(STOP_ANIMATION_ID).on("click", function() {
         //     settings.animate = false;
         // });
-        d3.select(DISPLAY_ID).on("click", function() {
-            var p = d3.mouse(this);
+        d3.select(DISPLAY_ID).on("click", function(event) {
+            var p = d3.pointer(event, this);
             var c = settings.projection.invert(p);
             var v = field(p[0], p[1]);
             if (v[2] >= INVISIBLE) {
