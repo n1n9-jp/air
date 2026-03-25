@@ -33,6 +33,43 @@
     // var STOP_ANIMATION_ID = "#stop-animation";
     var POSITION_ID = "#position";
 
+    // D3 v7 sequential/diverging color schemes for each overlay type.
+    // temp: diverging (cold blue → warm red)
+    // hum: sequential blue
+    // pollutants: sequential yellow → orange → red (severity)
+    // wv, in: sequential purple
+    var COLOR_SCHEMES = {
+        "temp": d3.interpolateRdYlBu,   // reversed: blue=cold, red=hot
+        "hum":  d3.interpolateBlues,
+        "wv":   d3.interpolatePurples,
+        "in":   d3.interpolateYlOrBr,
+        "no":   d3.interpolateYlOrRd,
+        "no2":  d3.interpolateYlOrRd,
+        "nox":  d3.interpolateYlOrRd,
+        "ox":   d3.interpolateYlOrRd,
+        "so2":  d3.interpolateYlOrRd,
+        "co":   d3.interpolateYlOrRd,
+        "ch4":  d3.interpolateYlOrRd,
+        "nmhc": d3.interpolateYlOrRd,
+        "spm":  d3.interpolateYlOrRd,
+        "pm25": d3.interpolateYlOrRd
+    };
+
+    /**
+     * Returns an rgba color string for the given overlay value [0,1] and alpha.
+     * Uses D3 v7 sequential color schemes appropriate for each data type.
+     */
+    function overlayColorStyle(t, a) {
+        var scheme = COLOR_SCHEMES[displayData.type];
+        if (!scheme) scheme = d3.interpolateYlOrRd;
+        // For temp (diverging): reverse so 0=blue(cold), 1=red(hot)
+        var st = displayData.type === "temp" ? 1 - t : t;
+        var color = d3.color(scheme(st));
+        if (!color) return "rgba(0,0,0,0)";
+        color.opacity = a;
+        return color.toString();
+    }
+
     // metadata about each type of overlay
     var OVERLAY_TYPES = {
         "temp": {min: -10,   max: 35,    scale: "line", precision: 1, label: "気温 Temperature", unit: "ºC"},
@@ -116,28 +153,6 @@
 
     function asColorStyle(r, g, b, a) {
         return "rgba(" + r + ", " + g + ", " + b + ", " + a + ")";
-    }
-
-    /**
-     * Produces a color style in a rainbow-like trefoil color space. Not quite HSV, but produces a nice
-     * spectrum. See http://krazydad.com/tutorials/makecolors.php.
-     *
-     * @param hue the hue rotation in the range [0, 1]
-     * @param a the alpha value in the range [0, 1]
-     * @returns {String} rgba style string
-     */
-    function asRainbowColorStyle(hue, a) {
-        // Map hue [0, 1] to radians [0, 5/6τ]. Don't allow a full rotation because that keeps hue == 0 and
-        // hue == 1 from mapping to the same color.
-        var rad = hue * τ * 5/6;
-        rad *= 0.75;  // increase frequency to 2/3 cycle per rad
-
-        var s = Math.sin(rad);
-        var c = Math.cos(rad);
-        var r = Math.floor(Math.max(0, -c) * 255);
-        var g = Math.floor(Math.max(s, 0) * 255);
-        var b = Math.floor(Math.max(c, 0, -s) * 255);
-        return asColorStyle(r, g, b, a);
     }
 
     function init() {
@@ -806,7 +821,7 @@
             barCanvas.height = 6;
             var bg = barCanvas.getContext("2d");
             for (var i = 0; i < barW; i++) {
-                bg.fillStyle = asRainbowColorStyle(i / barW, 0.9);
+                bg.fillStyle = overlayColorStyle(i / barW, 0.9);
                 bg.fillRect(i, 0, 1, 6);
             }
             if (barLabel && overlayType) {
@@ -826,7 +841,7 @@
                         // Map to logarithmic range [1, 101] then back to [0, 1]. Seems legit.
                         z = Math.log(z * 100 + 1) / LN101;
                     }
-                    g.fillStyle = asRainbowColorStyle(z, 0.4);
+                    g.fillStyle = overlayColorStyle(z, 0.4);
                     g.fillRect(x, y, 2, 2);
                 }
             }
