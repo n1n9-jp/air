@@ -148,20 +148,22 @@ fadeFillStyle: "rgba(0, 0, 0, 0.97)",  // 軌跡の残像の消え方
 
 ## カラースキーム
 
-オーバーレイの配色はD3 v7の連続的・分岐的カラースキームを採用しています。
+オーバーレイの配色は気象庁の「気象情報の配色に関する設定指針」およびD3 v7のカラースキームを採用しています。
 定義は `public/js/air.js` の `COLOR_SCHEMES` オブジェクトで変更できます。
 
 | データ種別 | カラースキーム | 視覚的な表現 |
 |---|---|---|
-| temp（気温） | `d3.interpolateRdYlBu`（反転） | 青(寒)→黄→赤(暖) |
+| temp（気温） | 気象庁 気温配色（表3-1） | 紺(寒)→青→白→黄→橙→赤→赤紫(暑) |
 | hum（湿度） | `d3.interpolateBlues` | 薄青→濃青 |
 | wv（風速） | `d3.interpolatePurples` | 薄紫→濃紫 |
 | in（日射量） | `d3.interpolateYlOrBr` | 黄→橙→茶 |
-| 汚染物質全般 | `d3.interpolateYlOrRd` | 黄緑→黄→橙→赤 |
+| 汚染物質全般 | 気象庁 危険度配色（表2-1） | 白→水色→青→黄→橙→赤→赤紫 |
 
 汚染物質全般: NO, NO2, NOx, Ox, SO2, CO, CH4, NMHC, SPM, PM2.5
 
-D3 v7で利用可能なカラースキーム一覧: https://d3js.org/d3-scale-chromatic
+参考:
+- 気象庁配色指針: https://www.jma.go.jp/jma/kishou/info/colorguide/
+- D3 v7カラースキーム: https://d3js.org/d3-scale-chromatic
 
 ## データソースについて
 

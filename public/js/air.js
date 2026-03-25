@@ -33,38 +33,95 @@
     // var STOP_ANIMATION_ID = "#stop-animation";
     var POSITION_ID = "#position";
 
-    // D3 v7 sequential/diverging color schemes for each overlay type.
-    // temp: diverging (cold blue → warm red)
-    // hum: sequential blue
-    // pollutants: sequential yellow → orange → red (severity)
-    // wv, in: sequential purple
+    // ===================== Color Scales =====================
+
+    /**
+     * Creates a color interpolation function from an array of [t, r, g, b] stops.
+     * Returns a function(t) where t is [0, 1] that returns {r, g, b}.
+     */
+    function createColorScale(stops) {
+        return function(t) {
+            t = Math.max(0, Math.min(1, t));
+            // Find the two surrounding stops
+            for (var i = 1; i < stops.length; i++) {
+                if (t <= stops[i][0]) {
+                    var s0 = stops[i - 1], s1 = stops[i];
+                    var f = (t - s0[0]) / (s1[0] - s0[0]);
+                    return {
+                        r: Math.round(s0[1] + (s1[1] - s0[1]) * f),
+                        g: Math.round(s0[2] + (s1[2] - s0[2]) * f),
+                        b: Math.round(s0[3] + (s1[3] - s0[3]) * f)
+                    };
+                }
+            }
+            var last = stops[stops.length - 1];
+            return {r: last[1], g: last[2], b: last[3]};
+        };
+    }
+
+    // JMA Temperature color scale (表3-1: アメダス気温)
+    // min=-10, max=35 → mapped to t=[0, 1]
+    // -5以下=紺, -5~0=濃青, 0~5=青, 5~10=淡青, 10~15=白, 15~20=淡黄, 20~25=黄, 25~30=橙, 30~35=赤, 35~=赤紫
+    var JMA_TEMP = createColorScale([
+        [0.000,   0,  32, 128],  // ~-5℃ 紺
+        [0.111,   0,  65, 255],  // -5~0℃ 濃青
+        [0.222,   0, 150, 255],  // 0~5℃ 青
+        [0.333, 185, 235, 255],  // 5~10℃ 淡青
+        [0.444, 255, 255, 240],  // 10~15℃ 白
+        [0.556, 255, 255, 150],  // 15~20℃ 淡黄
+        [0.667, 250, 245,   0],  // 20~25℃ 黄
+        [0.778, 255, 153,   0],  // 25~30℃ 橙
+        [0.889, 255,  40,   0],  // 30~35℃ 赤
+        [1.000, 180,   0, 104]   // 35℃~ 赤紫
+    ]);
+
+    // JMA severity color scale (表2-1: 危険度が増す情報)
+    // low(white) → blue → yellow → orange → red → red-purple
+    var JMA_SEVERITY = createColorScale([
+        [0.000, 242, 242, 255],  // ほぼ0 白
+        [0.143, 160, 210, 255],  // 微量 淡水色
+        [0.286,  33, 140, 255],  // やや低 水色
+        [0.429,   0,  65, 255],  // 低 青
+        [0.571, 250, 245,   0],  // 注意 黄
+        [0.714, 255, 153,   0],  // やや高 橙
+        [0.857, 255,  40,   0],  // 高 赤
+        [1.000, 180,   0, 104]   // 最高 赤紫
+    ]);
+
+    // Color scheme mapping per overlay type
     var COLOR_SCHEMES = {
-        "temp": d3.interpolateRdYlBu,   // reversed: blue=cold, red=hot
-        "hum":  d3.interpolateBlues,
-        "wv":   d3.interpolatePurples,
-        "in":   d3.interpolateYlOrBr,
-        "no":   d3.interpolateYlOrRd,
-        "no2":  d3.interpolateYlOrRd,
-        "nox":  d3.interpolateYlOrRd,
-        "ox":   d3.interpolateYlOrRd,
-        "so2":  d3.interpolateYlOrRd,
-        "co":   d3.interpolateYlOrRd,
-        "ch4":  d3.interpolateYlOrRd,
-        "nmhc": d3.interpolateYlOrRd,
-        "spm":  d3.interpolateYlOrRd,
-        "pm25": d3.interpolateYlOrRd
+        "temp": JMA_TEMP,          // 気象庁 気温配色
+        "hum":  d3.interpolateBlues,       // D3 sequential blue
+        "wv":   d3.interpolatePurples,     // D3 sequential purple
+        "in":   d3.interpolateYlOrBr,      // D3 sequential yellow-brown
+        "no":   JMA_SEVERITY,      // 気象庁 危険度配色
+        "no2":  JMA_SEVERITY,
+        "nox":  JMA_SEVERITY,
+        "ox":   JMA_SEVERITY,
+        "so2":  JMA_SEVERITY,
+        "co":   JMA_SEVERITY,
+        "ch4":  JMA_SEVERITY,
+        "nmhc": JMA_SEVERITY,
+        "spm":  JMA_SEVERITY,
+        "pm25": JMA_SEVERITY
     };
 
     /**
      * Returns an rgba color string for the given overlay value [0,1] and alpha.
-     * Uses D3 v7 sequential color schemes appropriate for each data type.
+     * Uses JMA color scales for temp and pollutants, D3 schemes for others.
      */
     function overlayColorStyle(t, a) {
         var scheme = COLOR_SCHEMES[displayData.type];
-        if (!scheme) scheme = d3.interpolateYlOrRd;
-        // For temp (diverging): reverse so 0=blue(cold), 1=red(hot)
-        var st = displayData.type === "temp" ? 1 - t : t;
-        var color = d3.color(scheme(st));
+        if (!scheme) scheme = JMA_SEVERITY;
+
+        // JMA custom scales return {r, g, b}
+        if (scheme === JMA_TEMP || scheme === JMA_SEVERITY) {
+            var c = scheme(t);
+            return "rgba(" + c.r + "," + c.g + "," + c.b + "," + a + ")";
+        }
+
+        // D3 interpolation schemes
+        var color = d3.color(scheme(t));
         if (!color) return "rgba(0,0,0,0)";
         color.opacity = a;
         return color.toString();
