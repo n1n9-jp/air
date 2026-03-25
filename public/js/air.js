@@ -88,12 +88,23 @@
         [1.000, 180,   0, 104]   // 最高 赤紫
     ]);
 
+    // JMA sunshine/insolation color scale (アメダス日照時間配色)
+    // low(blue) → light blue → yellow → orange → red → red-purple(high)
+    var JMA_INSOLATION = createColorScale([
+        [0.000,   0,  65, 255],  // 0.0~0.2 青
+        [0.200, 185, 235, 255],  // 0.2~0.4 淡青
+        [0.400, 250, 245,   0],  // 0.4~0.6 黄
+        [0.600, 255, 153,   0],  // 0.6~0.8 橙
+        [0.800, 255,  40,   0],  // 0.8~1.0 赤
+        [1.000, 180,   0, 104]   // 1.0 赤紫
+    ]);
+
     // Color scheme mapping per overlay type
     var COLOR_SCHEMES = {
         "temp": JMA_TEMP,          // 気象庁 気温配色
         "hum":  d3.interpolateBlues,       // D3 sequential blue
         "wv":   d3.interpolatePurples,     // D3 sequential purple
-        "in":   d3.interpolateYlOrBr,      // D3 sequential yellow-brown
+        "in":   JMA_INSOLATION,    // 気象庁 日照時間配色
         "no":   JMA_SEVERITY,      // 気象庁 危険度配色
         "no2":  JMA_SEVERITY,
         "nox":  JMA_SEVERITY,
@@ -115,7 +126,7 @@
         if (!scheme) scheme = JMA_SEVERITY;
 
         // JMA custom scales return {r, g, b}
-        if (scheme === JMA_TEMP || scheme === JMA_SEVERITY) {
+        if (scheme === JMA_TEMP || scheme === JMA_SEVERITY || scheme === JMA_INSOLATION) {
             var c = scheme(t);
             return "rgba(" + c.r + "," + c.g + "," + c.b + "," + a + ")";
         }

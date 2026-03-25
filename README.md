@@ -156,7 +156,7 @@ fadeFillStyle: "rgba(0, 0, 0, 0.97)",  // 軌跡の残像の消え方
 | temp（気温） | 気象庁 気温配色（表3-1） | 紺(寒)→青→白→黄→橙→赤→赤紫(暑) |
 | hum（湿度） | `d3.interpolateBlues` | 薄青→濃青 |
 | wv（風速） | `d3.interpolatePurples` | 薄紫→濃紫 |
-| in（日射量） | `d3.interpolateYlOrBr` | 黄→橙→茶 |
+| in（日射量） | 気象庁 日照時間配色 | 青→淡青→黄→橙→赤→赤紫 |
 | 汚染物質全般 | 気象庁 危険度配色（表2-1） | 白→水色→青→黄→橙→赤→赤紫 |
 
 汚染物質全般: NO, NO2, NOx, Ox, SO2, CO, CH4, NMHC, SPM, PM2.5
