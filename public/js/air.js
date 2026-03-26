@@ -476,6 +476,9 @@
         var type = displayData.type;
         var features = [];
         data[0].samples.forEach(function(e) {
+            if (e.coordinates[0] == null || e.coordinates[1] == null) {
+                return;
+            }
             var hasData = false;
             if (type === "wind") {
                 hasData = isValidSample(e.wind);
@@ -568,6 +571,9 @@
     function buildPointsFromSamples(samples, projection, transform) {
         var points = [];
         samples.forEach(function(sample) {
+            if (sample.coordinates[0] == null || sample.coordinates[1] == null) {
+                return;
+            }
             var point = projection(sample.coordinates);
             var value = transform(sample);
             if (value !== null) {

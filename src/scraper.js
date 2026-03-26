@@ -31,6 +31,13 @@ export async function fetchWindDirections() {
 }
 
 /**
+ * Fetches the station master data.
+ */
+export async function fetchStations() {
+    return fetchJSON(BASE_URL + "/V501Station.json");
+}
+
+/**
  * Fetches hourly measurement data for the specified dateHour (YYYYMMDDHH).
  */
 export async function fetchHourlyData(dateHour) {

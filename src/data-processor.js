@@ -179,10 +179,5 @@ export function processHourlyData(data, dateHour) {
         rows.push(row);
     }
 
-    if (windDataCount < 5) {
-        console.log("insufficient wind data: " + windDataCount);
-        return null;
-    }
-
-    return rows;
+    return { rows: rows, windDataCount: windDataCount };
 }

@@ -26,7 +26,7 @@ air - データソース
 | 更新頻度 | 1時間ごとにポーリング |
 
 新サイトのフロントエンドが内部的に利用しているJSON APIからデータを取得し、
-PostgreSQLに保存しています。
+Cloudflare D1（SQLite）に保存しています。
 
 > **JSON APIについての注意事項：**
 >
@@ -75,30 +75,33 @@ PostgreSQLに保存しています。
 
 | 項目 | 内容 |
 |------|------|
-| ファイル | `station-data.json` |
-| 局数 | 約50か所 |
-| 内容 | 測定局ID、名称、住所、緯度・経度 |
+| データ元 | 東京都環境局 `V501Station.json` + DBシードデータ |
+| 局数 | 82か所 |
+| 内容 | 測定局ID、名称、住所、緯度・経度、開始/終了年月 |
+| 同期 | cron実行時にAPIから自動同期（新規局検出・名称変更検出） |
 
 ## データフロー
 
 ```
-東京都環境局サイト → スクレイパー(scraper.js) → PostgreSQL → Express.js API → クライアント(air.js)
-                                                                                    ↓
-国土交通省XML → TopoJSON変換(ksj.js) → tokyo-topo.json ──────────────────────→ D3.js で地図描画
-                                                                                    ↓
-                                                                         IDW/TPS補間 → Canvas上にアニメーション描画
+東京都環境局サイト → スクレイパー(scraper.js) → Cloudflare D1 → Pages Functions API → クライアント(air.js)
+                                                                                        ↓
+国土交通省XML → TopoJSON変換(ksj.js) → tokyo-topo.json ────────────────────────→ D3.js で地図描画
+                                                                                        ↓
+                                                                             IDW/TPS補間 → Canvas上にアニメーション描画
 ```
 
 ## 主要ファイル一覧
 
 | ファイル | 説明 |
 |----------|------|
-| `server.js` | メインサーバー、スクレイパー制御、定期更新 |
-| `scraper.js` | HTMLパース・データ抽出ユーティリティ |
-| `api.js` | Express.jsルーティング・APIエンドポイント |
-| `schema.js` | PostgreSQLテーブル定義 |
-| `station-data.json` | 測定局の位置・メタデータ |
-| `ksj/ksj.js` | 国土数値情報XML → TopoJSON変換ツール |
+| `src/cron-handler.js` | Cloudflare Workerのcronハンドラ、定期データ取得・局同期 |
+| `src/scraper.js` | 東京都環境局JSON APIからのデータ取得 |
+| `src/data-processor.js` | APIレスポンスのDB行変換・単位スケーリング |
+| `src/db.js` | D1データベース操作（UPSERT、SELECT、局同期） |
+| `src/response-builder.js` | D1結果のクライアントJSON形式への変換 |
+| `src/api-helpers.js` | 入力バリデーション・クエリ構築 |
+| `functions/` | Cloudflare Pages Functions（APIエンドポイント） |
+| `migrations/` | D1マイグレーション（スキーマ定義・シードデータ） |
 | `public/js/air.js` | クライアント側の可視化・データ読込・アニメーション |
 | `public/js/mvi.js` | 多変量補間アルゴリズム（IDW, TPS） |
 | `public/data/tokyo-topo.json` | 東京の地理境界データ（TopoJSON） |

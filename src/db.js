@@ -58,6 +58,65 @@ export async function selectAllStations(db) {
 }
 
 /**
+ * Sync stations table with API station master data.
+ * Inserts new stations, detects name changes, and updates sd/ed.
+ *
+ * @param {D1Database} db
+ * @param {Object} apiStations - V501Station.json data keyed by 4-digit code
+ */
+export async function syncStations(db, apiStations) {
+    var existing = await selectAllStations(db);
+    var existingMap = {};
+    for (var i = 0; i < existing.results.length; i++) {
+        var s = existing.results[i];
+        existingMap[s.id] = s;
+    }
+
+    var stmts = [];
+    var codes = Object.keys(apiStations);
+    for (var i = 0; i < codes.length; i++) {
+        var code = codes[i];
+        var api = apiStations[code];
+        var id = parseInt(code, 10);
+        var sd = api.sd != null ? api.sd : null;
+        var ed = api.ed != null ? api.ed : null;
+        var dbStation = existingMap[id];
+
+        if (!dbStation) {
+            // New station - only insert if currently active
+            if (ed === 999912) {
+                console.warn("New station detected: " + id + " " + api.name);
+                stmts.push(
+                    db.prepare(
+                        "INSERT INTO stations (id, name, sd, ed) VALUES (?, ?, ?, ?)"
+                    ).bind(id, api.name, sd, ed)
+                );
+            }
+        } else {
+            // Existing station - check for changes
+            if (dbStation.name !== api.name) {
+                console.warn("Station name changed: " + id + " " + dbStation.name + " → " + api.name);
+            }
+            if (dbStation.sd !== sd || dbStation.ed !== ed) {
+                stmts.push(
+                    db.prepare(
+                        "UPDATE stations SET sd = ?, ed = ? WHERE id = ?"
+                    ).bind(sd, ed, id)
+                );
+                if (ed !== 999912) {
+                    console.warn("Station closed: " + id + " " + api.name + " (ed=" + ed + ")");
+                }
+            }
+        }
+    }
+
+    if (stmts.length > 0) {
+        await db.batch(stmts);
+        console.log("Station sync: " + stmts.length + " updates applied");
+    }
+}
+
+/**
  * Build and execute a samples query based on constraints.
  *
  * @param {D1Database} db

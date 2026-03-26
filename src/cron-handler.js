@@ -3,9 +3,9 @@
  * Triggered by Cron Triggers (every hour).
  */
 
-import { fetchProperty, fetchHourlyData } from "./scraper.js";
+import { fetchProperty, fetchHourlyData, fetchStations } from "./scraper.js";
 import { processHourlyData, dateToDateHour } from "./data-processor.js";
-import { batchUpsertSamples } from "./db.js";
+import { batchUpsertSamples, syncStations } from "./db.js";
 
 /**
  * Fetch and store data for a single dateHour.
@@ -15,14 +15,17 @@ async function fetchAndStore(db, dateHour) {
     try {
         console.log("Fetching data for " + dateHour + "...");
         var data = await fetchHourlyData(dateHour);
-        var rows = processHourlyData(data, dateHour);
-        if (!rows) {
+        var result = processHourlyData(data, dateHour);
+        if (!result) {
             console.log("No valid data for " + dateHour);
             return 0;
         }
-        await batchUpsertSamples(db, rows);
-        console.log("Stored " + rows.length + " rows for " + dateHour);
-        return rows.length;
+        if (result.windDataCount < 5) {
+            console.log("Low wind data for " + dateHour + ": " + result.windDataCount + " stations");
+        }
+        await batchUpsertSamples(db, result.rows);
+        console.log("Stored " + result.rows.length + " rows for " + dateHour);
+        return result.rows.length;
     } catch (e) {
         console.error("Error fetching " + dateHour + ": " + e.message);
         return 0;
@@ -32,6 +35,14 @@ async function fetchAndStore(db, dateHour) {
 export default {
     async scheduled(event, env, ctx) {
         var db = env.DB;
+
+        // 0. Sync station master data
+        try {
+            var apiStations = await fetchStations();
+            await syncStations(db, apiStations);
+        } catch (e) {
+            console.error("Station sync failed: " + e.message);
+        }
 
         // 1. Get the latest available dateHour from the Tokyo API
         var property = await fetchProperty();
