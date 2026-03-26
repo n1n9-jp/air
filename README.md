@@ -3,6 +3,10 @@ air-tokyo (Cloudflare版)
 
 東京都の大気質データを可視化するプロジェクト「air」のCloudflare Workers + D1 + Pages版です。
 
+## To Do
+- 測定局に住所を元にした緯度経度を念のため確認
+- データのみを取り出せるAPIを用意する
+
 ## アーキテクチャ
 
 ```
